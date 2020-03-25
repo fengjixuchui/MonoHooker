@@ -1,10 +1,10 @@
-# MonoHooker
+# MonoHook
 本代码的功能是运行时修改C#函数
 ## 特点：
 * 运行时直接修改内存中的 jit 代码，不会修改 UnityEditor.dll 等文件，避免让别人修改文件的尴尬。
 * 不影响调试。
 * 同时支持 .net 2.x 与 .net 4.x。
-* 目前测试支持 unity4.7.2, unity5.x, unity 2017 与 unity 2018。
+* 目前测试支持 unity4.7.2, unity5.x, unity 2017, unity 2018, unity 2019。
 * 使用很方便，在C#内定义签名与原始方法相同的两个方法然后注册一下就能用了。
 * 目前已支持 Android Mono, Windows Mono/IL2CPP
 
@@ -18,29 +18,33 @@
 
 ## 使用方法
 ```CSharp
-    [DidReloadScripts] // 最好脚本加载完毕就 hook
-    static void InstallHook()
-    {
-        if(_hooker == null)
+   [InitializeOnLoad] // 最好Editor启动及重新编译完毕就执行
+   public static class HookTest
+   {
+        static HookTest()
         {
-            Type type = Type.GetType("UnityEditor.LogEntries,UnityEditor.dll");
-            // 找到需要 Hook 的方法
-            MethodInfo miTarget = type.GetMethod("Clear", BindingFlags.Static | BindingFlags.Public);
+            if(_hook == null)
+            {
+                Type type = Type.GetType("UnityEditor.LogEntries,UnityEditor.dll");
+                // 找到需要 Hook 的方法
+                MethodInfo miTarget = type.GetMethod("Clear", BindingFlags.Static | BindingFlags.Public);
 
-            type = typeof(PinnedLog);
+                type = typeof(PinnedLog);
 
-            // 找到被替换成的新方法
-            MethodInfo miReplacement = type.GetMethod("NewClearLog", BindingFlags.Static | BindingFlags.NonPublic);
+                // 找到被替换成的新方法
+                MethodInfo miReplacement = type.GetMethod("NewClearLog", BindingFlags.Static | BindingFlags.NonPublic);
 
-            // 这个方法是用来调用原始方法的
-            MethodInfo miProxy = type.GetMethod("ProxyClearLog", BindingFlags.Static | BindingFlags.NonPublic);
+                // 这个方法是用来调用原始方法的
+                MethodInfo miProxy = type.GetMethod("ProxyClearLog", BindingFlags.Static | BindingFlags.NonPublic);
 
-            // 创建一个 Hooker 并 Install 就OK啦, 之后无论哪个代码再调用原始方法都会重定向到
-            //  我们写的方法ヾ(ﾟ∀ﾟゞ)
-            _hooker = new MethodHooker(miTarget, miReplacement, miProxy);
-            _hooker.Install();
+                // 创建一个 Hook 并 Install 就OK啦, 之后无论哪个代码再调用原始方法都会重定向到
+                //  我们写的方法ヾ(ﾟ∀ﾟゞ)
+                _hook = new MethodHook(miTarget, miReplacement, miProxy);
+                _hook.Install();
+            }
         }
-    }
+   }
+    
 ```
 ## 存在问题
  - 运行时目前只支持 android jit 以及 windows IL2CPP, android il2cpp 需要增加一个 so 来调用 mprotect 方法，现在不准备搞。
